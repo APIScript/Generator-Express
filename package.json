@@ -1,0 +1,32 @@
+{
+  "name": "@apiscript/express",
+  "version": "1.0.0",
+  "main": "build/main/index.js",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "@apiscript",
+    "apiscript",
+    "generator",
+    "express"
+  ],
+  "author": "Cytren",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/del": "^2.2.32",
+    "@types/node": "^7.0.14",
+    "@types/shelljs": "^0.7.1",
+    "gulp": "^3.9.1",
+    "gulp-json-editor": "^2.2.1",
+    "gulp-sequence": "^0.4.6",
+    "gulp-typescript": "^3.1.6",
+    "apiscript": "^1.0.0",
+    "typescript": "^2.3.2"
+  },
+  "dependencies": {
+    "del": "^2.2.2",
+    "shelljs": "^0.7.7"
+  }
+}

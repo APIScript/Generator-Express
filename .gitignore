@@ -1,0 +1,10 @@
+
+.idea
+.git
+*.iml
+node_modules
+build
+package
+test/build
+error-log.api
+npm-debug.log
