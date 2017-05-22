@@ -1,6 +1,16 @@
 
-// takes a primitive value and returns it, used for parsing collections
-export function parsePrimitive(data: number | boolean | string): number | boolean | string {
+// takes a number and returns it, used for parsing collections
+export function parseNumber(data: number): number {
+    return data;
+}
+
+// takes a boolean and returns it, used for parsing collections
+export function parseBoolean(data: boolean): boolean {
+    return data;
+}
+
+// takes a string and returns it, used for parsing collections
+export function parseString(data: string): string {
     return data;
 }
 

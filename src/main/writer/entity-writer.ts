@@ -57,7 +57,10 @@ function writeParseFunction(entity: Entity, libDir: string, name: string, fileNa
     writer.write(`import {${name}} from '../entity/${fileName}';`);
     writer.newLine();
 
-    writer.write(`import {parsePrimitive, parseList, parseSet, parseMap} from '../core/parse-util';`);
+    writer.write(`import {parseNumber, parseBoolean, parseString} from '../core/parse-util';`);
+    writer.newLine();
+
+    writer.write(`import {parseList, parseSet, parseMap} from '../core/parse-util';`);
     writer.newLine();
 
     let importTypes = propertyUtil.calculatePropertyImports(entity);
@@ -161,6 +164,13 @@ function writeParseEntity(type: PropertyType, writer: TypescriptWriter) {
         }
 
     } else if (type.isPrimitive) {
-        writer.write(`parsePrimitive`);
+
+        if (type.isInteger || type.isFloat) {
+            writer.write(`parseNumber`);
+        } else if (type.isBoolean) {
+            writer.write(`parseBoolean`);
+        } else if (type.isString) {
+            writer.write(`parseString`);
+        }
     }
 }

@@ -22,7 +22,10 @@ export function writeHandlerClasses(api: API, libDir: string, mainWriter: Typesc
         let writer = new TypescriptWriter(`${libDir}/handler/${fileName}.ts`);
         writer.newLine();
 
-        writer.write(`import {parsePrimitive, parseList, parseSet, parseMap} from '../core/parse-util';`);
+        writer.write(`import {parseNumber, parseBoolean, parseString} from '../core/parse-util';`);
+        writer.newLine();
+
+        writer.write(`import {parseList, parseSet, parseMap} from '../core/parse-util';`);
         writer.newLine();
 
         writer.write(`import {Request as ExpressRequest, Response as ExpressResponse} from "express";`);
@@ -81,12 +84,6 @@ export function writeHandlerClasses(api: API, libDir: string, mainWriter: Typesc
         if (endpoint.requestType) {
             let type = endpoint.requestType;
             writer.indent();
-
-            `try {
-                req.body = parse_account(request.body);
-            } catch (e) {
-                res.error(e.message);
-            }`;
 
             writer.write(`try `);
             writer.openClosure();
@@ -168,6 +165,13 @@ function writeParseEntity(type: PropertyType, writer: TypescriptWriter) {
         }
 
     } else if (type.isPrimitive) {
-        writer.write(`parsePrimitive`);
+
+        if (type.isInteger || type.isFloat) {
+            writer.write(`parseNumber`);
+        } else if (type.isBoolean) {
+            writer.write(`parseBoolean`);
+        } else if (type.isString) {
+            writer.write(`parseString`);
+        }
     }
 }
