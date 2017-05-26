@@ -9,10 +9,9 @@ import {TypescriptWriter} from "./typescript-writer";
 export function writeEndpointClasses(api: API, apiDir: string) {
 
     api.forEachEndpoint((endpoint) => {
-
         let url = transform.urlToDash(endpoint.url);
-        let fileName = `${url}-${apiscript.requestMethodToString(endpoint.requestMethod).toLowerCase()}`;
-        let methodString = apiscript.requestMethodToString(endpoint.requestMethod).toUpperCase();
+        let fileName = `${url}-${apiscript.RequestMethod[endpoint.requestMethod].toLowerCase()}`;
+        let methodString = apiscript.RequestMethod[endpoint.requestMethod].toUpperCase();
 
         // only generate if this endpoint doesn't already exist
         if (fs.existsSync(`${apiDir}/${fileName}.ts`)) { return; }

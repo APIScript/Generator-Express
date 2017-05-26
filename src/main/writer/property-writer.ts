@@ -4,9 +4,10 @@ import * as transform from "../util/text-transformers";
 import * as propertyUtil from "../util/property-util";
 
 import {TypescriptWriter} from "./typescript-writer";
+import {PropertyType} from "apiscript";
 
-export function writePropertyImports(dir: string, writer: TypescriptWriter, propertyHolder: apiscript.Entity | apiscript.Endpoint): number {
-    let importTypes = propertyUtil.calculatePropertyImports(propertyHolder);
+export function writePropertyImports(dir: string, writer: TypescriptWriter, type: PropertyType): number {
+    let importTypes = propertyUtil.calculatePropertyImports(type);
 
     importTypes.forEach((importType) => {
         writer.write(`import {${importType}} from '${dir}/${transform.pascalToDash(importType)}';`);
@@ -23,7 +24,7 @@ export function writeProperty(writer: TypescriptWriter, property: apiscript.Prop
     if (property.isOptional) { writer.write('?'); }
     writer.write(`: ${propertyUtil.propertyTypeToString(property.type)}`);
 
-    if (property.type.isCollection || property.defaultValue) {
+    if (property.type.asCollection || property.defaultValue) {
         writer.write(` = ${propertyUtil.propertyToInstantiationString(property)}`);
     }
 

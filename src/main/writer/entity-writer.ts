@@ -9,11 +9,10 @@ import * as transform from "../util/text-transformers";
 export function writeEntityClasses(api: API, libDir: string) {
 
     api.forEachEntity((entity) => {
+        let name = transform.dashToPascal(entity.name);
+        let fileName = entity.name;
 
-        let name = entity.name;
-        let fileName = transform.pascalToDash(name);
-
-        console.log(`Generating entity ${entity.name}`);
+        console.log(`Generating entity ${name}`);
 
         writeEntityClass(entity, libDir, name, fileName);
         writeParseFunction(entity, libDir, name, fileName);
@@ -25,13 +24,13 @@ function writeEntityClass(entity: Entity, libDir: string, name: string, fileName
     let writer = new TypescriptWriter(`${libDir}/entity/${fileName}.ts`);
     writer.newLine();
 
-    let importCount = propertyWriter.writePropertyImports('.', writer, entity);
+    let importCount = propertyWriter.writePropertyImports('.', writer, entity.closure);
     if (importCount > 0) { writer.newLine(); }
 
     if (entity.inherits) {
-        writer.write(`import {${entity.inherits}} from './${transform.pascalToDash(entity.inherits)}';`);
+        writer.write(`import {${transform.dashToPascal(entity.inherits)}} from './${entity.inherits}';`);
         writer.newLine(2);
-        writer.write(`export class ${name} extends ${entity.inherits} `);
+        writer.write(`export class ${name} extends ${transform.dashToPascal(entity.inherits)} `);
     } else {
         writer.write(`export class ${name} `);
     }
@@ -39,7 +38,7 @@ function writeEntityClass(entity: Entity, libDir: string, name: string, fileName
     writer.openClosure();
     writer.newLine();
 
-    entity.forEachProperty((property) => {
+    entity.closure.forEachProperty((property) => {
         propertyWriter.writeProperty(writer, property);
     });
 
@@ -52,7 +51,7 @@ function writeParseFunction(entity: Entity, libDir: string, name: string, fileNa
     let writer = new TypescriptWriter(`${libDir}/parse/${fileName}.ts`);
     writer.newLine();
 
-    let fieldName = transform.pascalToCamel(name);
+    let fieldName = transform.dashToCamel(fileName);
 
     writer.write(`import {${name}} from '../entity/${fileName}';`);
     writer.newLine();
@@ -63,7 +62,7 @@ function writeParseFunction(entity: Entity, libDir: string, name: string, fileNa
     writer.write(`import {parseList, parseSet, parseMap} from '../core/parse-util';`);
     writer.newLine();
 
-    let importTypes = propertyUtil.calculatePropertyImports(entity);
+    let importTypes = propertyUtil.calculatePropertyImports(entity.closure);
     importTypes.forEach((type) => {
         writer.write(`import {parse${type}} from './${transform.pascalToDash(type)}';`);
         writer.newLine();
@@ -76,10 +75,10 @@ function writeParseFunction(entity: Entity, libDir: string, name: string, fileNa
     writer.newLine();
 
     writer.indent();
-    writer.write(`let ${fileName} = new ${name}();`);
+    writer.write(`let ${fieldName} = new ${name}();`);
     writer.newLine(2);
 
-    entity.forEachProperty((property) => {
+    entity.closure.forEachProperty((property) => {
         if (!property.isOptional && !property.defaultValue) {
 
             writer.indent();
@@ -89,11 +88,11 @@ function writeParseFunction(entity: Entity, libDir: string, name: string, fileNa
     });
     writer.newLine();
 
-    entity.forEachProperty((property) => {
+    entity.closure.forEachProperty((property) => {
         writer.indent();
         let type = property.type;
 
-        if (type.isEntity || type.isCollection) {
+        if (type.asCustom || type.asCollection) {
             writer.newLine();
 
             writer.indent();
@@ -103,11 +102,13 @@ function writeParseFunction(entity: Entity, libDir: string, name: string, fileNa
 
             writer.indent();
 
-            if (type.isEntity) {
-                writer.write(`${fileName}.${property.name} = parse${type}(${property.name});`);
-            } else if (type.isCollection) {
+            if (type.asCustom) {
+                writer.write(`${fieldName}.${property.name} = ` +
+                    `parse${transform.dashToPascal(type.asCustom.type)}(${property.name});`);
 
-                writer.write(`${fileName}.${property.name} = `);
+            } else if (type.asCollection) {
+
+                writer.write(`${fieldName}.${property.name} = `);
                 writeParseEntity(type, writer);
                 writer.write(`(body.${property.name});`);
             }
@@ -117,7 +118,7 @@ function writeParseFunction(entity: Entity, libDir: string, name: string, fileNa
             writer.closeClosure();
 
         } else {
-            writer.write(`${fileName}.${property.name} = body.${property.name};`);
+            writer.write(`${fieldName}.${property.name} = body.${property.name};`);
         }
 
         writer.newLine();
@@ -135,25 +136,26 @@ function writeParseFunction(entity: Entity, libDir: string, name: string, fileNa
 
 function writeParseEntity(type: PropertyType, writer: TypescriptWriter) {
 
-    if (type.isEntity) {
-        writer.write(`parse${type}`);
-    } else if (type.isCollection) {
+    if (type.asCustom || type.asClosure) {
+        writer.write(`parse${transform.dashToPascal(type.asCustom.type)}`);
+    } else if (type.asCollection) {
+        let collection = type.asCollection;
 
-        if (type.isList) {
+        if (collection.asList) {
             let list = type as ListPropertyType;
 
             writer.write('parseList(');
             writeParseEntity(list.type, writer);
             writer.write(')');
 
-        } else if (type.isSet) {
+        } else if (collection.asSet) {
             let set = type as SetPropertyType;
 
             writer.write('parseSet(');
             writeParseEntity(set.type, writer);
             writer.write(')');
 
-        } else if (type.isMap) {
+        } else if (collection.asMap) {
             let map = type as MapPropertyType;
 
             writer.write('parseMap(');
@@ -163,13 +165,14 @@ function writeParseEntity(type: PropertyType, writer: TypescriptWriter) {
             writer.write(')');
         }
 
-    } else if (type.isPrimitive) {
+    } else if (type.asPrimitive) {
+        let primitive = type.asPrimitive;
 
-        if (type.isInteger || type.isFloat) {
+        if (primitive.asInteger || primitive.asFloat) {
             writer.write(`parseNumber`);
-        } else if (type.isBoolean) {
+        } else if (primitive.asBoolean) {
             writer.write(`parseBoolean`);
-        } else if (type.isString) {
+        } else if (primitive.asString) {
             writer.write(`parseString`);
         }
     }

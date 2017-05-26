@@ -11,12 +11,14 @@ export function writeRequestClasses(api: API, libDir: string) {
 
     api.forEachEndpoint((endpoint) => {
         let url = transform.urlToDash(endpoint.url);
-        let fileName = `${url}-${apiscript.requestMethodToString(endpoint.requestMethod).toLowerCase()}`;
+        let fileName = `${url}-${apiscript.RequestMethod[endpoint.requestMethod].toLowerCase()}`;
 
         let writer = new TypescriptWriter(`${libDir}/request/${fileName}.ts`);
         writer.newLine();
 
-        let importCount = propertyWriter.writePropertyImports('../entity', writer, endpoint);
+        let importCount = 0;
+        if (endpoint.bodyType) { importCount += propertyWriter.writePropertyImports('../entity', writer, endpoint.bodyType); }
+        if (endpoint.respondType) { importCount += propertyWriter.writePropertyImports('../entity', writer, endpoint.respondType); }
         if (importCount > 0) { writer.newLine(); }
 
         writer.write('export class Request ');
@@ -39,9 +41,11 @@ export function writeRequestClasses(api: API, libDir: string) {
         writer.openClosure();
         writer.newLine();
 
-        endpoint.forEachProperty((property) => {
-            propertyWriter.writeProperty(writer, property);
-        });
+        if (endpoint.requestType) {
+            endpoint.requestType.asClosure.forEachProperty((property) => {
+                propertyWriter.writeProperty(writer, property);
+            });
+        }
 
         writer.closeClosure();
         writer.newLine();

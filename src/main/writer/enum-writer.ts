@@ -7,14 +7,14 @@ import * as transform from "../util/text-transformers";
 export function writeEnumClasses(api: API, libDir: string) {
 
     api.forEachEnum((enumerator) => {
-        let name = enumerator.name;
-        let fileName = transform.pascalToDash(name);
+        let name = transform.dashToPascal(enumerator.name);
+        let fileName = enumerator.name;
         let writer = new TypescriptWriter(`${libDir}/entity/${fileName}.ts`);
 
-        console.log(`Generating enum ${enumerator.name}`);
+        console.log(`Generating enum ${name}`);
 
         writer.newLine();
-        writer.write(`export const enum ${name} `);
+        writer.write(`export enum ${name} `);
         writer.openClosure();
         writer.newLine();
 

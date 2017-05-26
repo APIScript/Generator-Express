@@ -1,27 +1,35 @@
 
 import * as apiscript from "apiscript";
+import * as transform from "./text-transformers";
 
 export function calculatePropertyTypeNames(propertyType: apiscript.PropertyType, types = new Set<string>()): Set<string> {
 
-    if (propertyType.isEntity) {
+    if (propertyType.asCustom) {
         let name = propertyTypeToString(propertyType);
         types.add(name);
 
-    } else if (propertyType.isCollection) {
+    } else if (propertyType.asCollection) {
+        let collection = propertyType.asCollection;
 
-        if (propertyType.isList) {
+        if (collection.asList) {
             let list = propertyType as apiscript.ListPropertyType;
             calculatePropertyTypeNames(list.type, types);
 
-        } else if (propertyType.isSet) {
+        } else if (collection.asSet) {
             let set = propertyType as apiscript.SetPropertyType;
             calculatePropertyTypeNames(set.type, types);
 
-        } else if (propertyType.isMap) {
+        } else if (collection.asMap) {
             let map = propertyType as apiscript.MapPropertyType;
             calculatePropertyTypeNames(map.keyType, types);
             calculatePropertyTypeNames(map.valueType, types);
         }
+    } else if (propertyType.asClosure) {
+        let closure = propertyType.asClosure;
+
+        closure.forEachProperty((property) => {
+            calculatePropertyTypeNames(property.type, types);
+        });
     }
 
     return types;
@@ -29,27 +37,29 @@ export function calculatePropertyTypeNames(propertyType: apiscript.PropertyType,
 
 export function propertyTypeToString(propertyType: apiscript.PropertyType): string {
 
-    if (propertyType.isPrimitive) {
+    if (propertyType.asPrimitive) {
+        let primitive = propertyType.asPrimitive;
 
-        if (propertyType.isInteger || propertyType.isFloat) {
+        if (primitive.asInteger || primitive.asFloat) {
             return "number";
-        } else if (propertyType.isBoolean) {
+        } else if (primitive.asBoolean) {
             return "boolean";
-        } else if (propertyType.isString) {
+        } else if (primitive.asString) {
             return "string";
         }
 
-    } else if (propertyType.isCollection) {
+    } else if (propertyType.asCollection) {
+        let collection = propertyType.asCollection;
 
-        if (propertyType.isList) {
+        if (collection.asList) {
             let list = propertyType as apiscript.ListPropertyType;
             return `${propertyTypeToString(list.type)}[]`;
-        } else if (propertyType.isSet) {
+        } else if (collection.asSet) {
             let set = propertyType as apiscript.SetPropertyType;
             let type = propertyTypeToString(set.type);
 
             return `Set<${type}>`;
-        } else if (propertyType.isMap) {
+        } else if (collection.asMap) {
             let map = propertyType as apiscript.MapPropertyType;
             let keyType = propertyTypeToString(map.keyType);
             let valueType = propertyTypeToString(map.valueType);
@@ -57,34 +67,47 @@ export function propertyTypeToString(propertyType: apiscript.PropertyType): stri
             return `Map<${keyType}, ${valueType}>`;
         }
 
+    } else if (propertyType.asClosure) {
+        let result = '{ ';
+        let closure = propertyType.asClosure;
+
+        closure.forEachProperty((property, index) => {
+            result += `${property.name}: ${propertyTypeToString(property.type)}`;
+            if (index < closure.propertyCount - 1) { result += ', '; }
+        });
+
+        return result + ' }';
+
     } else {
-        return propertyType.toString();
+        return transform.dashToPascal(propertyType.asCustom.type);
     }
 }
 
 export function propertyToInstantiationString(property: apiscript.Property): string {
     let propertyType = property.type;
 
-    if (propertyType.isPrimitive) {
+    if (propertyType.asPrimitive) {
+        let primitive = propertyType.asPrimitive;
 
-        if (propertyType.isInteger || propertyType.isFloat) {
+        if (primitive.asInteger || primitive.asFloat) {
             return property.defaultValue;
-        } else if (propertyType.isBoolean) {
+        } else if (primitive.asBoolean) {
             return property.defaultValue;
-        } else if (propertyType.isString) {
+        } else if (primitive.asString) {
             return `"${property.defaultValue}"`;
         }
 
-    } else if (propertyType.isCollection) {
+    } else if (propertyType.asCollection) {
+        let collection = propertyType.asCollection;
 
-        if (propertyType.isList) {
+        if (collection.asList) {
             return `[]`;
-        } else if (propertyType.isSet) {
+        } else if (collection.asSet) {
             let set = propertyType as apiscript.SetPropertyType;
             let type = propertyTypeToString(set.type);
 
             return `new Set<${type}>()`;
-        } else if (propertyType.isMap) {
+        } else if (collection.asMap) {
             let map = propertyType as apiscript.MapPropertyType;
             let keyType = propertyTypeToString(map.keyType);
             let valueType = propertyTypeToString(map.valueType);
@@ -92,21 +115,28 @@ export function propertyToInstantiationString(property: apiscript.Property): str
             return `new Map<${keyType}, ${valueType}>()`;
         }
 
-    } else {
-        return propertyType.toString();
-    }
+    } else if (propertyType.asClosure) {
+        let closure = propertyType.asClosure;
+        let result = '{ ';
 
+        closure.forEachProperty((property, index) => {
+            result += `${property.name}: ${propertyToInstantiationString(property)}`;
+            if (index < closure.propertyCount - 1) { result += ', '; }
+        });
+
+        return result + ' }';
+
+    } else {
+        return transform.dashToPascal(propertyType.asCustom.type)
+    }
 }
 
-export function calculatePropertyImports(propertyHolder: apiscript.Entity | apiscript.Endpoint): Set<string> {
+export function calculatePropertyImports(type: apiscript.PropertyType): Set<string> {
     let importTypes = new Set<string>();
+    let typeNames = calculatePropertyTypeNames(type);
 
-    propertyHolder.forEachProperty((property) => {
-        let typeNames = calculatePropertyTypeNames(property.type);
-
-        typeNames.forEach((value) => {
-            importTypes.add(value);
-        });
+    typeNames.forEach((value) => {
+        importTypes.add(value);
     });
 
     return importTypes;

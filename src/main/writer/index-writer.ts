@@ -11,7 +11,6 @@ import * as apiscript from 'apiscript';
 import * as transform from "../util/text-transformers";
 
 export function writeIndexClass(api: API, libDir: string, apiDir: string) {
-
     let writer = new TypescriptWriter(`${libDir}/apiscript.ts`);
     writer.newLine();
 
@@ -24,7 +23,7 @@ export function writeIndexClass(api: API, libDir: string, apiDir: string) {
     api.forEachEndpoint((endpoint) => {
         let url = transform.urlToDash(endpoint.url);
         let functionName = transform.urlToCamel(endpoint.url);
-        let fileName = `${url}-${apiscript.requestMethodToString(endpoint.requestMethod).toLowerCase()}`;
+        let fileName = `${url}-${apiscript.RequestMethod[endpoint.requestMethod].toLowerCase()}`;
 
         writer.write(`import ${functionName} from "./handler/${fileName}";`);
         writer.newLine();
